@@ -5,16 +5,16 @@ This project implements the AES encryption algorithm using SystemC. The AES encr
 
 ## Project Structure
 The project contains the following directory structure:
-.\n
-├── inc\n
-│   ├── aes_constants.h\n
-│   └── AES_encryption.h\n
-├── Makefile\n
-├── nistAES.pdf\n
-├── README.md\n
-└── src\n
-    ├── AES_encryption.cpp\n
-    └── test_AES.cpp\n
+.
+├── inc
+│   ├── aes_constants.h
+│   └── AES_encryption.h
+├── Makefile
+├── nistAES.pdf
+├── README.md
+└── src
+    ├── AES_encryption.cpp
+    └── test_AES.cpp
 
 
 - **`inc/`**: Contains the header files.
@@ -69,7 +69,9 @@ The expected output after encryption is:
 Example Output:
 
 `FINAL STATS Plain Text = 0x00112233445566778899aabbccddeeff`
+
 `Secret Key = 0x000102030405060708090a0b0c0d0e0f` 
+
 `Cypher Text = 0x69c4e0d86a7b0430d8cdb78070b4c55a`
 
 `ENCRYPTION SUCCESSFUL`
