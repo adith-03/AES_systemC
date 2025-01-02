@@ -68,7 +68,9 @@ The expected output after encryption is:
 
 Example Output:
 
-`FINAL STATS Plain Text = 0x00112233445566778899aabbccddeeff`
+`FINAL STATS`  
+
+`Plain Text = 0x00112233445566778899aabbccddeeff`
 
 `Secret Key = 0x000102030405060708090a0b0c0d0e0f` 
 
