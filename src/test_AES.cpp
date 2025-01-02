@@ -1,4 +1,4 @@
-#include "AES_encryption.h"
+#include "../inc/AES_encryption.h"
 
 int sc_main(int, char **)
 {

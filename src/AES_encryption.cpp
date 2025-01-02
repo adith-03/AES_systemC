@@ -1,4 +1,4 @@
-#include "AES_encryption.h"
+#include "../inc/AES_encryption.h"
 
 uint8_t mult_by_2(uint8_t in)
 {
@@ -94,7 +94,6 @@ void AES_encryption::do_shifting()
   sc_biguint<AES_SIZE> in  = SubByte_out.read();
   sc_biguint<AES_SIZE> out = SubByte_out.read();
 
-  int start = AES_SIZE - 1;
   int shift_left{};
   int shift_size{};
   for (int i = AES_SIZE - 1; i >= 0; i -= 8) {
