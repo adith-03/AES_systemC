@@ -53,7 +53,7 @@ public:
    * gen_key: Event to trigger key expansion.
    * key_ready: Event indicating that the round key is ready.
    */
-  sc_event sb{"subbytes"}, sr{"shiftRow"}, mc{"MixColumn"}, gen_key{"gen_key"},
+  sc_event sb{"subBytes"}, sr{"shiftRow"}, mc{"MixColumn"}, gen_key{"gen_key"},
     key_ready{"key_ready"};
 
   /**

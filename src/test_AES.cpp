@@ -26,7 +26,54 @@ int sc_main(int, char **)
   Aes_en.initial_key.bind(initial_key);
   Aes_en.cypher_text.bind(cypher);
 
-  // Test case: Set plain text and initial key for encryption
+  /*
+  
+*/
+
+
+  sc_trace_file *tf = sc_create_vcd_trace_file("trace_ses_128");
+  sc_trace(tf, plain_text, "plain_text");
+  sc_trace(tf, initial_key, "key");
+  sc_trace(tf, Aes_en.current_round, "Round");
+
+  sc_trace(tf, Aes_en.round_in, "round_in");
+  sc_trace(tf, Aes_en.SubByte_out, "SubByte_out");
+  sc_trace(tf, Aes_en.shift_out, "shift_out");
+  sc_trace(tf, Aes_en.mix_out, "mixcolumn_out");
+  sc_trace(tf, Aes_en.round_out, "round_out");
+  sc_trace(tf, cypher, "cypher_text");
+
+  // Test case 1: Set plain text and initial key for encryption
+  // plain text is "HAPPY NEW YEAR" in 128 bit
+  plain_text.write(sc_biguint<AES_SIZE>(
+    "0x4841505059204E455720594541520000")); // Set 128-bit plain text
+  initial_key.write(
+    "0x2b7e151628aed2a6abf7158809cf4f3c"); // Set 128-bit encryption key
+
+  // Set the expected result after encryption (for verification)
+  expected_result = "0x9261485fd26d53c5d9d4fd92df57f444";
+
+
+  // Start the simulation
+  sc_start(50, SC_NS);
+  // Print out the final results
+  std::cout << "FINAL STATS\n";
+  std::cout << "Plain Text\t= " << plain_text.read() << "\n";
+  std::cout << "Secret Key\t= " << initial_key.read() << "\n";
+  std::cout << "Cypher Text\t= " << cypher << "\n";
+
+  // Output the total simulation time
+  std::cout << "\nTime = " << sc_time_stamp() << '\n';
+
+  // Check if the encryption was successful by comparing the cypher text with the expected result
+  if (cypher == expected_result) {
+    std::cout << "ENCRYPTION SUCCESSFULL\n";
+  } else {
+    std::cout << "ENCRYPTION FAILED\n";
+  }
+
+
+  // Test case 2: Set plain text and initial key for encryption
   plain_text.write(sc_biguint<AES_SIZE>(
     "0x00112233445566778899aabbccddeeff")); // Set 128-bit plain text
   initial_key.write(
@@ -35,8 +82,8 @@ int sc_main(int, char **)
   // Set the expected result after encryption (for verification)
   expected_result = "0x69c4e0d86a7b0430d8cdb78070b4c55a";
 
-  // Start the simulation
-  sc_start();
+  sc_start(50, SC_NS);
+
 
   // Print out the final results
   std::cout << "FINAL STATS\n";
@@ -53,6 +100,8 @@ int sc_main(int, char **)
   } else {
     std::cout << "ENCRYPTION FAILED\n";
   }
+
+  sc_close_vcd_trace_file(tf);
 
   return 0;
 }
