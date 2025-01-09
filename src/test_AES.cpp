@@ -1,4 +1,5 @@
 #include "../inc/AES_encryption.h"
+#include "../inc/AES_decryption.h"
 
 int sc_main(int, char **)
 {
@@ -11,9 +12,13 @@ int sc_main(int, char **)
   sc_signal<sc_biguint<AES_SIZE>> initial_key{
     "initial_key"}; // AES_SIZE-bit signal for the initial key (encryption key)
 
+
   // Output for the cypher (encrypted text)
   sc_signal<sc_biguint<AES_SIZE>> cypher{
     "cypher"}; // AES_SIZE-bit signal to store the encrypted output (cypher text)
+
+  // Output of the decryption
+  sc_signal<sc_biguint<AES_SIZE>> decrypted_text{"decrypted_text"};
 
   // Expected result for verification (correct encrypted output)
   sc_biguint<AES_SIZE> expected_result;
@@ -21,30 +26,77 @@ int sc_main(int, char **)
   // Instantiate AES_encryption module
   AES_encryption Aes_en{"aes_en"};
 
+  // Instantiate decryption unit
+  AES_decryption Aes_dec{"Aes_dec"};
+
   // Bind the input and output signals to the AES_encryption module
   Aes_en.plain_text.bind(plain_text);
   Aes_en.initial_key.bind(initial_key);
   Aes_en.cypher_text.bind(cypher);
 
-  /*
-  
-*/
+  // Bind the input and output signals to the AES_decryption module
+  Aes_dec.cypher_text.bind(cypher);
+  Aes_dec.secret_key.bind(initial_key);
+  Aes_dec.plain_text.bind(decrypted_text);
 
-
-  sc_trace_file *tf = sc_create_vcd_trace_file("trace_ses_128");
+  // // Create the Trace file
+  sc_trace_file *tf = sc_create_vcd_trace_file("aes_trace");
   sc_trace(tf, plain_text, "plain_text");
   sc_trace(tf, initial_key, "key");
-  sc_trace(tf, Aes_en.current_round, "Round");
-
-  sc_trace(tf, Aes_en.round_in, "round_in");
-  sc_trace(tf, Aes_en.SubByte_out, "SubByte_out");
-  sc_trace(tf, Aes_en.shift_out, "shift_out");
-  sc_trace(tf, Aes_en.mix_out, "mixcolumn_out");
-  sc_trace(tf, Aes_en.round_out, "round_out");
   sc_trace(tf, cypher, "cypher_text");
+  sc_trace(tf, decrypted_text, "decrypted_text");
 
-  // Test case 1: Set plain text and initial key for encryption
-  // plain text is "HAPPY NEW YEAR" in 128 bit
+
+  // /*****************************************************************
+  //  * Test case 1: Set plain text and initial key for encryption
+  //  *
+  //  * Plain text and Key taken from the example given in nistAES.pdf
+  // ******************************************************************/
+  // std ::cout << "TEST CASE 1\n\n";
+  // plain_text.write(sc_biguint<AES_SIZE>(
+  //   "0x00112233445566778899aabbccddeeff")); // Set 128-bit plain text
+  // initial_key.write(
+  //   "0x000102030405060708090a0b0c0d0e0f"); // Set 128-bit encryption key
+
+  // // Set the expected result after encryption (for verification)
+  // expected_result = "0x69c4e0d86a7b0430d8cdb78070b4c55a";
+
+  // sc_start(100, SC_NS);
+
+
+  // // Output the total simulation time
+  // std::cout << "\nTime = " << sc_time_stamp() << '\n';
+
+  // // Check if the encryption was successful by comparing the cypher text with the expected result
+  // if (cypher == expected_result) {
+  //   std::cout << "ENCRYPTION SUCCESSFULL\n";
+  // } else {
+  //   std::cout << "ENCRYPTION FAILED\n";
+  // }
+
+
+  // if (decrypted_text == plain_text) {
+  //   std::cout << "DECRYPTION SUCCESSFULL\n";
+  //   std::cout << "\nAES 128 PROCESS SUCCESSFULL\n\n";
+  // } else {
+  //   std::cout << "DECRYPTION SUCCESSFULL\n";
+  //   std::cout << "\nAES 128 PROCESS FAILED\n\n";
+  // }
+
+  // // Print out the final results
+  // std::cout << "FINAL STATS\n";
+  // std::cout << "Plain Text\t= " << plain_text.read() << "\n";
+  // std::cout << "Secret Key\t= " << initial_key.read() << "\n";
+  // std::cout << "Cypher Text\t= " << cypher << "\n";
+  // std::cout << "Decrpted text\t= " << decrypted_text << "\n";
+
+
+  /*****************************************************************
+   * Test case 2: Set plain text and initial key for encryption
+   * 
+   * Plain text is "HAPPY NEW YEAR" in 128 bit
+  ******************************************************************/
+  std ::cout << "TEST CASE 2\n\n";
   plain_text.write(sc_biguint<AES_SIZE>(
     "0x4841505059204E455720594541520000")); // Set 128-bit plain text
   initial_key.write(
@@ -53,14 +105,8 @@ int sc_main(int, char **)
   // Set the expected result after encryption (for verification)
   expected_result = "0x9261485fd26d53c5d9d4fd92df57f444";
 
+  sc_start(100, SC_NS);
 
-  // Start the simulation
-  sc_start(50, SC_NS);
-  // Print out the final results
-  std::cout << "FINAL STATS\n";
-  std::cout << "Plain Text\t= " << plain_text.read() << "\n";
-  std::cout << "Secret Key\t= " << initial_key.read() << "\n";
-  std::cout << "Cypher Text\t= " << cypher << "\n";
 
   // Output the total simulation time
   std::cout << "\nTime = " << sc_time_stamp() << '\n';
@@ -73,35 +119,22 @@ int sc_main(int, char **)
   }
 
 
-  // Test case 2: Set plain text and initial key for encryption
-  plain_text.write(sc_biguint<AES_SIZE>(
-    "0x00112233445566778899aabbccddeeff")); // Set 128-bit plain text
-  initial_key.write(
-    "0x000102030405060708090a0b0c0d0e0f"); // Set 128-bit encryption key
-
-  // Set the expected result after encryption (for verification)
-  expected_result = "0x69c4e0d86a7b0430d8cdb78070b4c55a";
-
-  sc_start(50, SC_NS);
-
+  if (decrypted_text == plain_text) {
+    std::cout << "DECRYPTION SUCCESSFULL\n";
+    std::cout << "\nAES 128 PROCESS SUCCESSFULL\n\n";
+  } else {
+    std::cout << "DECRYPTION SUCCESSFULL\n";
+    std::cout << "\nAES 128 PROCESS FAILED\n\n";
+  }
 
   // Print out the final results
   std::cout << "FINAL STATS\n";
   std::cout << "Plain Text\t= " << plain_text.read() << "\n";
   std::cout << "Secret Key\t= " << initial_key.read() << "\n";
   std::cout << "Cypher Text\t= " << cypher << "\n";
+  std::cout << "Decrpted text\t= " << decrypted_text << "\n";
 
-  // Output the total simulation time
-  std::cout << "\nTime = " << sc_time_stamp() << '\n';
-
-  // Check if the encryption was successful by comparing the cypher text with the expected result
-  if (cypher == expected_result) {
-    std::cout << "ENCRYPTION SUCCESSFULL\n";
-  } else {
-    std::cout << "ENCRYPTION FAILED\n";
-  }
-
-  sc_close_vcd_trace_file(tf);
+  sc_close_vcd_trace_file(tf); // Close the trace file
 
   return 0;
 }

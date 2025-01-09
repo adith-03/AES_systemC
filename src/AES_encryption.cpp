@@ -26,59 +26,63 @@ AES_encryption::AES_encryption(sc_module_name name) : sc_module(name)
 // Main encryption function that performs AES encryption
 void AES_encryption::encryption()
 {
-  while (1) {
-    std::cout << "Plain text = " << plain_text << '\n';
-    // Initial round key addition
-    round_in = plain_text ^ initial_key;
-    round_key.write(initial_key);
+  // while (1) {
+  std::cout << "Plain text = " << plain_text << '\n';
+  // Initial round key addition
+  round_in = plain_text ^ initial_key;
+  round_key.write(initial_key);
+  wait(1, SC_NS);
+  std::cout << "\nAfter initial AddRoundKey = " << round_in << '\n';
+
+  for (current_round = 1; current_round <= TOTAL_ROUNDS; current_round++) {
+    std::cout
+      << "===========================================================\n";
+    std::cout << "ROUND : " << std::dec << current_round << std::hex << "\n";
+    std::cout << "Round input\t: " << round_in << '\n';
+
+    // Perform SubBytes transformation
+    sb.notify();
     wait(1, SC_NS);
-    std::cout << "\nAfter initial AddRoundKey = " << round_in << '\n';
 
-    for (current_round = 1; current_round <= TOTAL_ROUNDS; current_round++) {
-      std::cout
-        << "===========================================================\n";
-      std::cout << "ROUND : " << std::dec << current_round << std::hex << "\n";
-      std::cout << "Round input\t: " << round_in << '\n';
+    // Perform ShiftRows transformation
+    sr.notify();
+    wait(1, SC_NS);
 
-      // Perform SubBytes transformation
-      sb.notify();
+    // Perform MixColumns transformation for all but the last round
+    if (current_round != LAST_ROUND) {
+      mc.notify();
       wait(1, SC_NS);
-
-      // Perform ShiftRows transformation
-      sr.notify();
-      wait(1, SC_NS);
-
-      // Perform MixColumns transformation for all but the last round
-      if (current_round != LAST_ROUND) {
-        mc.notify();
-        wait(1, SC_NS);
-      }
-
-      // Generate the current round key
-      gen_key.notify();
-      wait(key_ready);
-
-      // AddRoundKey transformation
-      if (current_round != LAST_ROUND) {
-        round_out = mix_out.read() ^ round_key;
-      } else {
-        round_out = shift_out.read() ^ round_key;
-      }
-      wait(1, SC_NS);
-      std::cout << "AddRoundKey Out\t: " << round_out << '\n';
-      round_in.write(
-        round_out.read()); // Pass current round's output to the next round
-
-      wait(SC_ZERO_TIME); // Ensure signal updates
-
-      std::cout
-        << "===========================================================\n\n";
     }
-    // Write the final encrypted output to cypher_text
-    cypher_text.write(round_out);
 
-    wait(plain_text.default_event() | initial_key.default_event());
+    // Generate the current round key
+    gen_key.notify();
+    wait(key_ready);
+
+    // AddRoundKey transformation
+    if (current_round != LAST_ROUND) {
+      round_out = mix_out.read() ^ round_key;
+    } else {
+      round_out = shift_out.read() ^ round_key;
+    }
+    wait(1, SC_NS);
+    std::cout << "AddRoundKey Out\t: " << round_out << '\n';
+    round_in.write(
+      round_out.read()); // Pass current round's output to the next round
+
+    wait(SC_ZERO_TIME); // Ensure signal updates
+
+    std::cout
+      << "===========================================================\n\n";
   }
+
+  std ::cout << "Encrypted text = " << round_out << '\n';
+  std ::cout << "ENCRYPTION COMPLETED\n";
+
+  // Write the final encrypted output to cypher_text
+  cypher_text.write(round_out);
+
+  //   wait(plain_text.default_event() | initial_key.default_event());
+  // }
 }
 
 // Performs the SubBytes transformation on the current input block
@@ -239,6 +243,7 @@ void AES_encryption::key_expansion()
     k[1] = in.range(95, 64);  // Second word of the current round key
     k[2] = in.range(63, 32);  // Third word of the current round key
     k[3] = in.range(31, 0);   // Fourth word of the current round key
+
 
     // Generate the next round key using the previous key
 
