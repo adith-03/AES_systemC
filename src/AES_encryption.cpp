@@ -26,7 +26,7 @@ AES_encryption::AES_encryption(sc_module_name name) : sc_module(name)
 // Main encryption function that performs AES encryption
 void AES_encryption::encryption()
 {
-  // while (1) {
+  std ::cout << "\vAES ENCRYPTION UNIT\n\n";
   std::cout << "Plain text = " << plain_text << '\n';
   // Initial round key addition
   round_in = plain_text ^ initial_key;
@@ -37,7 +37,8 @@ void AES_encryption::encryption()
   for (current_round = 1; current_round <= TOTAL_ROUNDS; current_round++) {
     std::cout
       << "===========================================================\n";
-    std::cout << "ROUND : " << std::dec << current_round << std::hex << "\n";
+    std::cout << "ENCRYPTION ROUND : " << std::dec << current_round << std::hex
+              << "\n";
     std::cout << "Round input\t: " << round_in << '\n';
 
     // Perform SubBytes transformation
@@ -80,9 +81,6 @@ void AES_encryption::encryption()
 
   // Write the final encrypted output to cypher_text
   cypher_text.write(round_out);
-
-  //   wait(plain_text.default_event() | initial_key.default_event());
-  // }
 }
 
 // Performs the SubBytes transformation on the current input block
@@ -92,6 +90,8 @@ void AES_encryption::subbytes()
   sc_biguint<AES_SIZE> sub_in;
   // Output block after SubBytes transformation
   sc_biguint<AES_SIZE> sub_out;
+
+  // Assign round input as inv_subbytes input
   sub_in = round_in.read();
 
   for (int i = AES_SIZE - 1; i >= 0; i -= BYTE) {
@@ -101,6 +101,7 @@ void AES_encryption::subbytes()
   SubByte_out.write(sub_out);
   std::cout << "SubBytes Out\t: " << sub_out << std::endl;
 }
+
 // Performs the ShiftRows transformation on the current block
 void AES_encryption::shifting()
 {
@@ -109,8 +110,9 @@ void AES_encryption::shifting()
   // Output block after ShiftRows transformation
   sc_biguint<AES_SIZE> out = SubByte_out.read();
 
-  int shift_left{};
-  int shift_size{};
+  int shift_left{}; // How many cells to shift
+  int shift_size{}; // shift value in bits
+
   for (int i = AES_SIZE - 1; i >= 0; i -= 8) {
     if ((i + 1) % WORD == FIRST_ROW) {
       continue; // No shifting for the first row
@@ -158,6 +160,7 @@ void AES_encryption::shifting()
 }
 
 // Helper function to multiply a byte by 2 in GF(2^8)
+namespace MC_HELPERS {
 uint8_t mult_by_2(uint8_t in)
 {
   uint8_t res = in << 1;
@@ -170,10 +173,11 @@ uint8_t mult_by_2(uint8_t in)
 // Helper function to multiply a byte by 3 in GF(2^8)
 uint8_t mult_by_3(uint8_t in)
 {
-  uint8_t res = mult_by_2(in);
+  uint8_t res = MC_HELPERS::mult_by_2(in);
   res         = res ^ in;
   return res;
 }
+} // namespace MC_HELPERS
 
 // Performs the MixColumns transformation on the current block
 void AES_encryption::mixcolumn()
@@ -194,24 +198,27 @@ void AES_encryption::mixcolumn()
   for (int i = 0; i < 4; i++) {
     // Perform GF(2^8) multiplication and XOR for each byte in the column
     out.range(index, index - (BYTE - 1))
-      = (mult_by_2(c[i].range(31, 24))) ^ (mult_by_3(c[i].range(23, 16)))
-        ^ (c[i].range(15, 8)) ^ (c[i].range((BYTE - 1), 0));
+      = (MC_HELPERS::mult_by_2(c[i].range(31, 24)))
+        ^ (MC_HELPERS::mult_by_3(c[i].range(23, 16))) ^ (c[i].range(15, 8))
+        ^ (c[i].range((BYTE - 1), 0));
     index -= BYTE;
 
     out.range(index, index - (BYTE - 1))
-      = (c[i].range(31, 24)) ^ (mult_by_2(c[i].range(23, 16)))
-        ^ (mult_by_3(c[i].range(15, 8))) ^ (c[i].range((BYTE - 1), 0));
+      = (c[i].range(31, 24)) ^ (MC_HELPERS::mult_by_2(c[i].range(23, 16)))
+        ^ (MC_HELPERS::mult_by_3(c[i].range(15, 8)))
+        ^ (c[i].range((BYTE - 1), 0));
     index -= BYTE;
 
     out.range(index, index - (BYTE - 1))
       = (c[i].range(31, 24)) ^ (c[i].range(23, 16))
-        ^ (mult_by_2(c[i].range(15, 8)))
-        ^ (mult_by_3(c[i].range((BYTE - 1), 0)));
+        ^ (MC_HELPERS::mult_by_2(c[i].range(15, 8)))
+        ^ (MC_HELPERS::mult_by_3(c[i].range((BYTE - 1), 0)));
     index -= BYTE;
 
     out.range(index, index - (BYTE - 1))
-      = (mult_by_3(c[i].range(31, 24))) ^ (c[i].range(23, 16))
-        ^ (c[i].range(15, 8)) ^ (mult_by_2(c[i].range((BYTE - 1), 0)));
+      = (MC_HELPERS::mult_by_3(c[i].range(31, 24))) ^ (c[i].range(23, 16))
+        ^ (c[i].range(15, 8))
+        ^ (MC_HELPERS::mult_by_2(c[i].range((BYTE - 1), 0)));
     index -= BYTE;
   }
 
@@ -219,7 +226,7 @@ void AES_encryption::mixcolumn()
   std::cout << "MixColumns Out\t: " << out << "\n";
 }
 
-// Key expansion function to generate round keys for AES
+// Key expansion process to generate round keys for AES
 void AES_encryption::key_expansion()
 {
   sc_biguint<AES_SIZE> in;  // Input round key

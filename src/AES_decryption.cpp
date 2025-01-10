@@ -1,5 +1,6 @@
 #include "../inc/AES_decryption.h"
 
+// Constructor
 AES_decryption::AES_decryption(sc_module_name name)
   : sc_module(name), Round_keys(TOTAL_ROUNDS + 1)
 {
@@ -18,26 +19,27 @@ AES_decryption::AES_decryption(sc_module_name name)
   dont_initialize();
 }
 
+// Main decryption function that perform the AES decryption
 void AES_decryption::decryption()
 {
+  // wait for the cypher text to get generated
   wait(cypher_text.default_event());
 
   std ::cout << "\vAES DECRYPTION UNIT\n\n";
   key_expansion(); // create all 10 keys
 
-  // while (1) {
   std::cout << "Cypher text = " << cypher_text << '\n';
   // Initial round key addition
   round_in = cypher_text ^ Round_keys[TOTAL_ROUNDS];
-  round_key.write(secret_key);
   wait(1, SC_NS);
-  std::cout << "\nAfter initial AddRoundKey          = " << round_in << '\n';
+  std::cout << "\nAfter initial AddRoundKey = " << round_in << '\n';
 
   for (current_round = 1; current_round <= TOTAL_ROUNDS; current_round++) {
     std::cout
       << "===========================================================\n";
-    std::cout << "ROUND : " << std::dec << current_round << std::hex << "\n";
-    std::cout << "Round input\t: " << round_in << '\n';
+    std::cout << "DECRYPTION ROUND : " << std::dec << current_round << std::hex
+              << "\n";
+    std::cout << "Round input\t\t: " << round_in << '\n';
 
     // Perform Inverse ShiftRows transformation
     i_sr.notify();
@@ -49,13 +51,13 @@ void AES_decryption::decryption()
 
 
     // AddRoundKey transformation
-    std ::cout << "Key\t\t= " << Round_keys[TOTAL_ROUNDS - current_round]
+    std ::cout << "Round Key\t\t= " << Round_keys[TOTAL_ROUNDS - current_round]
                << '\n';
     inv_add_round_out
       = inv_subByte_out.read() ^ Round_keys[TOTAL_ROUNDS - current_round];
 
     wait(1, SC_NS);
-    std::cout << "AddRoundKey Out\t: " << inv_add_round_out << '\n';
+    std::cout << "AddRoundKey Out\t\t: " << inv_add_round_out << '\n';
 
     // Perform inverse MixColumns transformation for all but the last round
     if (current_round != LAST_ROUND) {
@@ -78,22 +80,23 @@ void AES_decryption::decryption()
 
   // Write the final encrypted output to cypher_text
   plain_text.write(inv_add_round_out);
-  wait(SC_ZERO_TIME);
 
-  std ::cout << "Decrypted text = " << plain_text << '\n';
+  std ::cout << "Decrypted text = " << inv_add_round_out << '\n';
   std ::cout << "DECRYPTION COMPLETED\n";
 
-  //   wait(cypher_text.default_event() | secret_key.default_event());
-  // }
+  // Output the total simulation time
+  std::cout << "\nSimulation Time = " << sc_time_stamp() << '\n';
 }
 
-
+// Performs the inverse SubBytes transformation on the current input block
 void AES_decryption::inv_subbytes()
 {
   // Input block to be transformed
   sc_biguint<AES_SIZE> i_sub_in;
-  // Output block after SubBytes transformation
+  // Output block after inverse SubBytes transformation
   sc_biguint<AES_SIZE> i_sub_out;
+
+  // Assign inv_shiftrows output as inv_subbytes input
   i_sub_in = inv_shift_out.read();
 
   for (int i = AES_SIZE - 1; i >= 0; i -= BYTE) {
@@ -106,13 +109,14 @@ void AES_decryption::inv_subbytes()
 
 void AES_decryption::inv_shifting()
 {
-  // Input block from inverse SubBytes output
+  // Input block from round input
   sc_biguint<AES_SIZE> in = round_in.read();
   // Output block after inverse ShiftRows transformation
   sc_biguint<AES_SIZE> out = round_in.read();
 
-  int shift_right{};
-  int shift_size{};
+  int shift_right{}; // How many cells to shift
+  int shift_size{};  // shift value in bits
+
   for (int i = AES_SIZE - 1; i >= 0; i -= 8) {
     if ((i + 1) % WORD == FIRST_ROW) {
       continue; // No shifting for the first row
@@ -160,6 +164,7 @@ void AES_decryption::inv_shifting()
 }
 
 // Helper functions for inverse Mixcolumn calculations
+namespace IMC_HELPERS {
 uint8_t mult_by_0E(uint8_t in)
 {
   // 0x0E=00001110
@@ -258,13 +263,16 @@ uint8_t mult_by_09(uint8_t in)
   res = in ^ s3;
   return res;
 }
+} // namespace IMC_HELPERS
 
+// Performs the inverse MixColumns transformation on the current block
 void AES_decryption::inv_mixcolumn()
 {
-  // Input block from ShiftRows output
+  // Input block from add_round_key
   sc_biguint<AES_SIZE> in = inv_add_round_out.read();
-  // Output block after MixColumns transformation
+  // Output block after inverse  MixColumns transformation
   sc_biguint<AES_SIZE> out;
+
   sc_uint<WORD> c[4]; // Array to store 4 columns of the input block
 
   // Divide input into 4 columns
@@ -273,31 +281,36 @@ void AES_decryption::inv_mixcolumn()
   c[2] = in.range(63, 32);
   c[3] = in.range(31, 0);
 
-  int index = AES_SIZE - 1;
+  int index = AES_SIZE - 1; // Index for each byte
+
   for (int i = 0; i < 4; i++) {
     // Perform GF(2^8) multiplication and XOR for each byte in the column
     out.range(index, index - (BYTE - 1))
-      = (mult_by_0E(c[i].range(31, 24))) ^ (mult_by_0B(c[i].range(23, 16)))
-        ^ (mult_by_0D(c[i].range(15, 8)))
-        ^ (mult_by_09(c[i].range((BYTE - 1), 0)));
+      = (IMC_HELPERS::mult_by_0E(c[i].range(31, 24)))
+        ^ (IMC_HELPERS::mult_by_0B(c[i].range(23, 16)))
+        ^ (IMC_HELPERS::mult_by_0D(c[i].range(15, 8)))
+        ^ (IMC_HELPERS::mult_by_09(c[i].range((BYTE - 1), 0)));
     index -= BYTE;
 
     out.range(index, index - (BYTE - 1))
-      = (mult_by_09(c[i].range(31, 24))) ^ (mult_by_0E(c[i].range(23, 16)))
-        ^ (mult_by_0B(c[i].range(15, 8)))
-        ^ (mult_by_0D(c[i].range((BYTE - 1), 0)));
+      = (IMC_HELPERS::mult_by_09(c[i].range(31, 24)))
+        ^ (IMC_HELPERS::mult_by_0E(c[i].range(23, 16)))
+        ^ (IMC_HELPERS::mult_by_0B(c[i].range(15, 8)))
+        ^ (IMC_HELPERS::mult_by_0D(c[i].range((BYTE - 1), 0)));
     index -= BYTE;
 
     out.range(index, index - (BYTE - 1))
-      = (mult_by_0D(c[i].range(31, 24))) ^ (mult_by_09(c[i].range(23, 16)))
-        ^ (mult_by_0E(c[i].range(15, 8)))
-        ^ (mult_by_0B(c[i].range((BYTE - 1), 0)));
+      = (IMC_HELPERS::mult_by_0D(c[i].range(31, 24)))
+        ^ (IMC_HELPERS::mult_by_09(c[i].range(23, 16)))
+        ^ (IMC_HELPERS::mult_by_0E(c[i].range(15, 8)))
+        ^ (IMC_HELPERS::mult_by_0B(c[i].range((BYTE - 1), 0)));
     index -= BYTE;
 
     out.range(index, index - (BYTE - 1))
-      = (mult_by_0B(c[i].range(31, 24))) ^ (mult_by_0D(c[i].range(23, 16)))
-        ^ (mult_by_09(c[i].range(15, 8)))
-        ^ (mult_by_0E(c[i].range((BYTE - 1), 0)));
+      = (IMC_HELPERS::mult_by_0B(c[i].range(31, 24)))
+        ^ (IMC_HELPERS::mult_by_0D(c[i].range(23, 16)))
+        ^ (IMC_HELPERS::mult_by_09(c[i].range(15, 8)))
+        ^ (IMC_HELPERS::mult_by_0E(c[i].range((BYTE - 1), 0)));
     index -= BYTE;
   }
 

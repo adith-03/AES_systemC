@@ -41,6 +41,7 @@ int sc_main(int, char **)
 
   // // Create the Trace file
   sc_trace_file *tf = sc_create_vcd_trace_file("aes_trace");
+  tf->set_time_unit(1, SC_PS); // set tracing timescale unit
   sc_trace(tf, plain_text, "plain_text");
   sc_trace(tf, initial_key, "key");
   sc_trace(tf, cypher, "cypher_text");
@@ -96,7 +97,7 @@ int sc_main(int, char **)
    * 
    * Plain text is "HAPPY NEW YEAR" in 128 bit
   ******************************************************************/
-  std ::cout << "TEST CASE 2\n\n";
+  std ::cout << "\nTEST CASE 2\n\n";
   plain_text.write(sc_biguint<AES_SIZE>(
     "0x4841505059204E455720594541520000")); // Set 128-bit plain text
   initial_key.write(
@@ -107,9 +108,6 @@ int sc_main(int, char **)
 
   sc_start(100, SC_NS);
 
-
-  // Output the total simulation time
-  std::cout << "\nTime = " << sc_time_stamp() << '\n';
 
   // Check if the encryption was successful by comparing the cypher text with the expected result
   if (cypher == expected_result) {
@@ -123,7 +121,7 @@ int sc_main(int, char **)
     std::cout << "DECRYPTION SUCCESSFULL\n";
     std::cout << "\nAES 128 PROCESS SUCCESSFULL\n\n";
   } else {
-    std::cout << "DECRYPTION SUCCESSFULL\n";
+    std::cout << "DECRYPTION FAILED\n";
     std::cout << "\nAES 128 PROCESS FAILED\n\n";
   }
 

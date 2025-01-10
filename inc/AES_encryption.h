@@ -57,11 +57,6 @@ public:
     key_ready{"key_ready"};
 
   /**
-   * @brief The current round number of the AES encryption process.
-   */
-  int current_round{};
-
-  /**
    * @brief Constructor for the AES_encryption module.
    * @param name The name of the module.
    */
@@ -91,4 +86,10 @@ public:
    * @brief Handles the key expansion process.
    */
   void key_expansion();
+
+private:
+  /**
+   * @brief The current round number of the AES encryption process.
+   */
+  int current_round{};
 };
